@@ -9,8 +9,8 @@ describe('TodoListsController', () => {
 
   beforeEach(async () => {
     todoListService = new TodoListsService([
-      { id: 1, name: 'test1' },
-      { id: 2, name: 'test2' },
+      { id: 1, name: 'test1', items: [] },
+      { id: 2, name: 'test2', items: [] },
     ]);
 
     const app: TestingModule = await Test.createTestingModule({
@@ -65,6 +65,33 @@ describe('TodoListsController', () => {
       expect(() => todoListsController.delete({ todoListId: 1 })).not.toThrow();
 
       expect(todoListService.all().map((x) => x.id)).toEqual([2]);
+    });
+  });
+
+  describe('getTodoItems', () => {
+    it('should return the tasks of the todolist with the given id', () => {
+      expect(todoListsController.showTodoItems({ todoListId: 1 })).toEqual([]);
+    });
+
+    it('should throw an error if the todolist does not exist', () => {
+      expect(() => todoListsController.showTodoItems({ todoListId: 999 })).toThrow(
+        'Todo list with id 999 not found',
+      );
+    });
+  });
+
+  describe('addTask', () => {
+    it('should add a task to the todolist with the given id', () => {
+      const newTask = { content: 'new task' };
+      expect(
+        todoListsController.addTodoItem({ todoListId: 1 }, newTask),
+      ).toEqual({
+        id: 1,
+        name: 'test1',
+        tasks: [{ id: 1, content: 'new task', done: false }],
+      });
+
+      expect(todoListService.get(1).items.length).toBe(1);
     });
   });
 });
