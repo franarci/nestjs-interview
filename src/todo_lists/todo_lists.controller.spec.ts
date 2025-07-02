@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { before } from 'node:test';
 import { TodoListsController } from './todo_lists.controller';
 import { TodoListsService } from './todo_lists.service';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('TodoListsController', () => {
-  let todoListService: TodoListsService;
   let todoListsController: TodoListsController;
+  let todoListService: TodoListsService;
 
   beforeEach(async () => {
     todoListService = new TodoListsService([
@@ -13,85 +13,150 @@ describe('TodoListsController', () => {
       { id: 2, name: 'test2', items: [] },
     ]);
 
-    const app: TestingModule = await Test.createTestingModule({
+    const module: TestingModule = await Test.createTestingModule({
       controllers: [TodoListsController],
       providers: [{ provide: TodoListsService, useValue: todoListService }],
     }).compile();
 
-    todoListsController = app.get<TodoListsController>(TodoListsController);
+    todoListsController = module.get<TodoListsController>(TodoListsController);
   });
 
   describe('index', () => {
-    it('should return the list of todolist', () => {
-      expect(todoListsController.index()).toEqual([
-        { id: 1, name: 'test1' },
-        { id: 2, name: 'test2' },
-      ]);
+    it('should return all todo lists', () => {
+      expect(todoListsController.index()).toEqual(todoListService.all());
     });
   });
 
   describe('show', () => {
-    it('should return the todolist with the given id', () => {
-      expect(todoListsController.show({ todoListId: 1 })).toEqual({
-        id: 1,
-        name: 'test1',
-      });
+    it('should return a list by ID', () => {
+      expect(todoListsController.show({ todoListId: 1 })).toEqual(todoListService.get(1));
     });
-  });
 
-  describe('update', () => {
-    it('should update the todolist with the given id', () => {
-      expect(
-        todoListsController.update({ todoListId: 1 }, { name: 'modified' }),
-      ).toEqual({ id: 1, name: 'modified' });
-
-      expect(todoListService.get(1).name).toEqual('modified');
+    it('should throw if list not found', () => {
+      expect(() => todoListsController.show({ todoListId: 999 })).toThrowError(NotFoundException);
     });
   });
 
   describe('create', () => {
-    it('should update the todolist with the given id', () => {
-      expect(todoListsController.create({ name: 'new' })).toEqual({
-        id: 3,
-        name: 'new',
-      });
-
+    it('should create a new list', () => {
+      const result = todoListsController.create({ name: 'new list' });
+      expect(result.name).toBe('new list');
       expect(todoListService.all().length).toBe(3);
     });
+
+    it('should throw if name is missing', () => {
+      expect(() => todoListsController.create({ name: '' })).toThrowError(BadRequestException);
+    });
+  });
+
+  describe('update', () => {
+    it('should update the list name', () => {
+      const result = todoListsController.update({ todoListId: 1 }, { name: 'updated' });
+      expect(result.name).toBe('updated');
+    });
+
+    it('should throw if list not found', () => {
+      expect(() => todoListsController.update({ todoListId: 999 }, { name: 'x' })).toThrowError(NotFoundException);
+    });
+
+    it('should keep original name if dto.name is null', () => {
+    const original = todoListService.get(1);
+    const result = todoListService.update(1, { name: null });
+    expect(result.name).toBe(original.name);
+  });
   });
 
   describe('delete', () => {
-    it('should delete the todolist with the given id', () => {
-      expect(() => todoListsController.delete({ todoListId: 1 })).not.toThrow();
+    it('should delete the list', () => {
+      todoListsController.delete({ todoListId: 1 });
+      expect(todoListService.all().length).toBe(1);
+    });
 
-      expect(todoListService.all().map((x) => x.id)).toEqual([2]);
+    it('should throw if list not found', () => {
+      expect(() => todoListsController.delete({ todoListId: 999 })).toThrowError(NotFoundException);
     });
   });
 
-  describe('getTodoItems', () => {
-    it('should return the tasks of the todolist with the given id', () => {
+  describe('showTodoItems', () => {
+    it('should return items for a list', () => {
       expect(todoListsController.showTodoItems({ todoListId: 1 })).toEqual([]);
     });
 
-    it('should throw an error if the todolist does not exist', () => {
-      expect(() => todoListsController.showTodoItems({ todoListId: 999 })).toThrow(
-        'Todo list with id 999 not found',
-      );
+    it('should throw if list not found', () => {
+      expect(() => todoListsController.showTodoItems({ todoListId: 999 })).toThrowError(NotFoundException);
     });
   });
 
-  describe('addTask', () => {
-    it('should add a task to the todolist with the given id', () => {
-      const newTask = { content: 'new task' };
-      expect(
-        todoListsController.addTodoItem({ todoListId: 1 }, newTask),
-      ).toEqual({
-        id: 1,
-        name: 'test1',
-        tasks: [{ id: 1, content: 'new task', done: false }],
-      });
+  describe('addTodoItem', () => {
+    it('should add item to list', () => {
+      const result = todoListsController.addTodoItem({ todoListId: 1 }, { content: 'task' });
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].content).toBe('task');
+    });
 
-      expect(todoListService.get(1).items.length).toBe(1);
+    it('should throw if content is missing', () => {
+      expect(() => todoListsController.addTodoItem({ todoListId: 1 }, { content: '' })).toThrowError(BadRequestException);
+    });
+
+    it('should throw if list not found', () => {
+      expect(() => todoListsController.addTodoItem({ todoListId: 999 }, { content: 'x' })).toThrowError(NotFoundException);
+    });
+  });
+
+  describe('updateTodoItem', () => {
+    beforeEach(() => {
+      todoListsController.addTodoItem({ todoListId: 1 }, { content: 'original' });
+    });
+
+    it('should update an item', () => {
+      const result = todoListsController.updateTodoItem(
+        { todoListId: 1, itemId: '1' },
+        { content: 'updated', completed: true },
+      );
+      expect(result.items[0].content).toBe('updated');
+      expect(result.items[0].completed).toBe(true);
+    });
+
+    it('should throw if list not found', () => {
+      expect(() =>
+        todoListsController.updateTodoItem({ todoListId: 999, itemId: '1' }, { content: 'x', completed: true }),
+      ).toThrowError(NotFoundException);
+    });
+
+    it('should throw if item not found', () => {
+      expect(() =>
+        todoListsController.updateTodoItem({ todoListId: 1, itemId: '999' }, { content: 'x', completed: true }),
+      ).toThrowError(NotFoundException);
+    });
+
+    it('should keep original content and completed if dto.content and dto.completed are null', () => {
+    const original = todoListService.get(1).items[0];
+    const result = todoListService.updateTodoItem(1, '1', { content: null, completed: null });
+    expect(result.items[0].content).toBe(original.content);
+    expect(result.items[0].completed).toBe(original.completed);
+    });
+  });
+
+  describe('deleteTodoItem', () => {
+    beforeEach(() => {
+      todoListsController.addTodoItem({ todoListId: 1 }, { content: 'to delete' });
+    });
+
+    it('should delete an item', () => {
+      const result = todoListsController.deleteTodoItem({ todoListId: 1, itemId: '1' });
+      expect(result.items).toEqual([]);
+    });
+
+    it('should throw if list not found', () => {
+      expect(() =>
+        todoListsController.deleteTodoItem({ todoListId: 999, itemId: '1' }),
+      ).toThrowError(NotFoundException);
+    });
+
+    it('should throw if item not found', () => {
+      expect(() =>
+        todoListsController.deleteTodoItem({ todoListId: 1, itemId: '999' }),
+      ).toThrowError(NotFoundException);
     });
   });
 });

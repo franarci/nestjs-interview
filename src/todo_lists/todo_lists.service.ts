@@ -42,7 +42,7 @@ export class TodoListsService {
   }
 
   update(id: number, dto: UpdateTodoListDto): TodoList {
-    const todolist = this.get(id); // ya lanza excepción si no existe
+    const todolist = this.get(id);
 
     todolist.name = dto.name ?? todolist.name;
     return todolist;
@@ -121,7 +121,7 @@ export class TodoListsService {
   }
 
   private nextItemId(todoListId: number): number {
-    const list = this.get(todoListId); // lanza error si no existe
+    const list = this.get(todoListId);
     const last = list.items
       .map((x) => x.id)
       .sort((a, b) => b - a)[0];
