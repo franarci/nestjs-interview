@@ -78,4 +78,17 @@ export class TodoListsController {
   ): TodoList {
     return this.todoListsService.deleteTodoItem(param.todoListId, param.itemId);
   }
+
+  @Post('/:todoListId/items/bulk-update')
+  async bulkUpdate(
+    @Param('todoListId') todoListId: number,
+    @Body() body: { updates: any[]; userId: string },
+  ): Promise<{ status: string }> {
+    await this.todoListsService.bulkUpdate(
+      todoListId,
+      body.updates,
+      body.userId,
+    );
+    return { status: 'processing' };
+  }
 }

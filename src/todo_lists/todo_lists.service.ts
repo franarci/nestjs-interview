@@ -5,13 +5,15 @@ import { TodoList } from '../interfaces/todo_list.interface';
 import { TodoItem } from '../interfaces/todo_item.interface';
 import { CreateTodoItemDto } from './dtos/create-todo-item';
 import { UpdateTodoItemDto } from './dtos/update-todo-item';
+import { TodoGateway } from './todo_gateway';
 
 @Injectable()
 export class TodoListsService {
-  private readonly todolists: TodoList[];
+  private readonly todolists: TodoList[] = [];
+  private readonly todoGateway: TodoGateway
 
-  constructor(todoLists: TodoList[] = []) {
-    this.todolists = todoLists;
+  constructor(todoGateway: TodoGateway) {
+    this.todoGateway = todoGateway;
   }
 
   all(): TodoList[] {
@@ -128,4 +130,8 @@ export class TodoListsService {
 
     return last ? last + 1 : 1;
   }
+
+  async bulkUpdate(listId: number, updates: any[], userId: string): Promise<void> {
+  //todo
+}
 }
