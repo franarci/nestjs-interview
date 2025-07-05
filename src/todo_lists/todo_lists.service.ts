@@ -5,21 +5,25 @@ import { TodoList } from '../interfaces/todo_list.interface';
 import { TodoItem } from '../interfaces/todo_item.interface';
 import { CreateTodoItemDto } from './dtos/create-todo-item';
 import { UpdateTodoItemDto } from './dtos/update-todo-item';
-import { TodoGateway } from './todo_gateway';
+import { TodoGateway } from '../gateway/todo_gateway';
 
 @Injectable()
 export class TodoListsService {
-  private readonly todolists: TodoList[] = [];
+  private todolists: TodoList[];
   private readonly todoGateway: TodoGateway
 
   constructor(todoGateway: TodoGateway) {
     this.todoGateway = todoGateway;
+    this.todolists = [];
   }
 
   all(): TodoList[] {
     return this.todolists;
   }
-
+  //For testing purposes
+  setTodoLists(todolists: TodoList[]): void {
+    this.todolists = todolists;
+  }
   get(id: number): TodoList {
     const todo = this.todolists.find((x) => x.id === Number(id));
     if (!todo) {
@@ -131,7 +135,25 @@ export class TodoListsService {
     return last ? last + 1 : 1;
   }
 
-  async bulkUpdate(listId: number, updates: any[], userId: string): Promise<void> {
-  //todo
+  async bulkUpdate(listId: number, userId: string): Promise<void> {
+    const items = this.getTodoItems(listId);
+    const total = items.length;
+  
+    for (let i = 0; i < total; i++) {
+      await this.delay(1000);
+      items[i].completed = true;
+      this.updateTodoItem(listId, items[i].id.toString(), {
+        content: items[i].content,
+        completed: true
+      });
+
+      this.todoGateway.sendProgress(userId, { progress: i+1, total });
+    }
+
+    this.todoGateway.sendProgress(userId, { progress: total, total });
+  }
+
+  delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 }

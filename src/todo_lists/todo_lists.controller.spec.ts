@@ -2,16 +2,31 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TodoListsController } from './todo_lists.controller';
 import { TodoListsService } from './todo_lists.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { TodoGateway } from 'src/gateway/todo_gateway';
 
 describe('TodoListsController', () => {
   let todoListsController: TodoListsController;
   let todoListService: TodoListsService;
+  let mockTodoGateway: TodoGateway;
 
   beforeEach(async () => {
-    todoListService = new TodoListsService([
-      { id: 1, name: 'test1', items: [] },
-      { id: 2, name: 'test2', items: [] },
-    ]);
+    mockTodoGateway = {
+      server: {
+        to: jest.fn().mockReturnThis(),
+        emit: jest.fn(),
+      } as any,
+      sendProgress: jest.fn(),
+      handleConnection: jest.fn(),
+    };
+
+    todoListService = new TodoListsService(
+      mockTodoGateway
+    );
+
+    todoListService.setTodoLists([
+      { id: 1, name: 'list1', items: [] },
+      { id: 2, name: 'list2', items: [] },
+    ])
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TodoListsController],
@@ -159,4 +174,24 @@ describe('TodoListsController', () => {
       ).toThrowError(NotFoundException);
     });
   });
+
+  describe('bulkUpdate', () => {
+  it('should return status processing', () => {
+    const spy = jest.spyOn(todoListService, 'bulkUpdate').mockImplementation();
+
+    const result = todoListsController.bulkUpdate(1, 'user123');
+
+    expect(result).toEqual({ status: 'processing' });
+    expect(spy).toHaveBeenCalledWith(1, 'user123');
+  });
+
+  it('should throw NotFoundException if list does not exist', () => {
+    jest.spyOn(todoListService, 'bulkUpdate').mockImplementation(() => {
+      throw new NotFoundException();
+    });
+
+    expect(() => todoListsController.bulkUpdate(999, 'user123')).toThrowError(NotFoundException);
+  });
+
+});
 });

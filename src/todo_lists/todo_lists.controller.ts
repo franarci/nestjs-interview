@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { CreateTodoListDto } from './dtos/create-todo_list';
 import { UpdateTodoListDto } from './dtos/update-todo_list';
@@ -80,15 +81,11 @@ export class TodoListsController {
   }
 
   @Post('/:todoListId/items/bulk-update')
-  async bulkUpdate(
+     bulkUpdate(
     @Param('todoListId') todoListId: number,
-    @Body() body: { updates: any[]; userId: string },
-  ): Promise<{ status: string }> {
-    await this.todoListsService.bulkUpdate(
-      todoListId,
-      body.updates,
-      body.userId,
-    );
+    @Query('userId') userId: string, 
+  ): { status: string } {
+    this.todoListsService.bulkUpdate(todoListId, userId);
     return { status: 'processing' };
   }
 }
