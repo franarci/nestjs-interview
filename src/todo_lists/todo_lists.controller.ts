@@ -81,9 +81,9 @@ export class TodoListsController {
   }
 
   @Post('/:todoListId/items/bulk-update')
-     bulkUpdate(
+  bulkUpdate(
     @Param('todoListId') todoListId: number,
-    @Query('userId') userId: string, 
+    @Query('userId') userId: string,
   ): { status: string } {
     this.todoListsService.bulkUpdate(todoListId, userId);
     return { status: 'processing' };

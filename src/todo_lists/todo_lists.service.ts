@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateTodoListDto } from './dtos/create-todo_list';
 import { UpdateTodoListDto } from './dtos/update-todo_list';
 import { TodoList } from '../interfaces/todo_list.interface';
@@ -10,7 +14,7 @@ import { TodoGateway } from '../gateway/todo_gateway';
 @Injectable()
 export class TodoListsService {
   private todolists: TodoList[];
-  private readonly todoGateway: TodoGateway
+  private readonly todoGateway: TodoGateway;
 
   constructor(todoGateway: TodoGateway) {
     this.todoGateway = todoGateway;
@@ -119,18 +123,14 @@ export class TodoListsService {
   }
 
   private nextId(): number {
-    const last = this.todolists
-      .map((x) => x.id)
-      .sort((a, b) => b - a)[0];
+    const last = this.todolists.map((x) => x.id).sort((a, b) => b - a)[0];
 
     return last ? last + 1 : 1;
   }
 
   private nextItemId(todoListId: number): number {
     const list = this.get(todoListId);
-    const last = list.items
-      .map((x) => x.id)
-      .sort((a, b) => b - a)[0];
+    const last = list.items.map((x) => x.id).sort((a, b) => b - a)[0];
 
     return last ? last + 1 : 1;
   }
@@ -138,22 +138,22 @@ export class TodoListsService {
   async bulkUpdate(listId: number, userId: string): Promise<void> {
     const items = this.getTodoItems(listId);
     const total = items.length;
-  
+
     for (let i = 0; i < total; i++) {
       await this.delay(1000);
       items[i].completed = true;
       this.updateTodoItem(listId, items[i].id.toString(), {
         content: items[i].content,
-        completed: true
+        completed: true,
       });
 
-      this.todoGateway.sendProgress(userId, { progress: i+1, total });
+      this.todoGateway.sendProgress(userId, { progress: i + 1, total });
     }
 
     this.todoGateway.sendProgress(userId, { progress: total, total });
   }
 
   delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 }
